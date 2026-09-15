@@ -1,0 +1,50 @@
+{
+  "id": "target",
+  "step_number": 2,
+  "title": "2. Target",
+  "status": "implemented",
+  "prompt_path": "data/02_target_prompt.md",
+  "output_path": "feedback/target_response.md",
+  "depends_on": ["vision"],
+  "instructions": "Debe obtener una lista de Equipos, Gerencias, Sectores o grupos de usuarios finales beneficiarios.\n\nCada item debe representar un beneficiario de la solucion y debe ser evaluado como parte del Target.\n\nSiempre tener en cuenta que los equipos que trabajan desarrollando esta iniciativa no pueden ser los mismos que figuran como beneficiarios.",
+  "form": {
+    "entry_label": "Equipo, Gerencia, Sector o grupo beneficiario",
+    "entry_placeholder": "Ejemplo: Gerencia de Atencion al Cliente, Sector de Autorizaciones, Equipo de Auditoria Medica...",
+    "entry_lines": 2,
+    "add_button_label": "agregar",
+    "load_button_label": "cargar seleccionado",
+    "update_button_label": "actualizar",
+    "delete_button_label": "eliminar",
+    "list_label": "Lista de beneficiarios objetivo",
+    "selected_item_label": "Item seleccionado para editar o eliminar",
+    "submit_label": "Procesar",
+    "output_label": "Resultado",
+    "output_lines": 14,
+    "previous_step_label": "Volver al paso anterior",
+    "next_step_label": "Estoy conforme, ir al tercer paso"
+  },
+  "list_behavior": {
+    "add": "Al presionar agregar, el valor escrito se adiciona a la lista de beneficiarios objetivo si no esta vacio y no existe ya en la lista.",
+    "load": "Al seleccionar un item y presionar cargar seleccionado, el item se copia al campo de texto para editarlo.",
+    "update": "Al presionar actualizar, el item seleccionado se reemplaza por el texto editado si no esta vacio y no genera duplicados.",
+    "delete": "Al seleccionar un item de la lista y presionar eliminar, ese item se remueve para permitir correcciones.",
+    "duplicates": "No se deben agregar duplicados exactos ni equivalentes por mayusculas, minusculas o espacios.",
+    "empty_values": "No se deben agregar valores vacios.",
+    "minimum_items_to_process": 1
+  },
+  "validation_rules": [
+    "El Target no puede ser una lista vacia.",
+    "El Target no puede contener beneficiarios, unidades, areas o segmentos repetidos.",
+    "El Target debe indicar la unidad o area de negocio beneficiaria.",
+    "El Target debe identificar un segmento o grupo especifico dentro de esa unidad o area.",
+    "El Target debe responder a quien beneficia la iniciativa.",
+    "El Target debe distinguir beneficiarios de equipos constructores.",
+    "Los equipos que desarrollan la iniciativa no pueden figurar como beneficiarios.",
+    "El Target debe mantener coherencia con la Vision ya definida."
+  ],
+  "model_output_sections": [
+    "Target propuesto",
+    "Validacion",
+    "Ajustes sugeridos"
+  ]
+}

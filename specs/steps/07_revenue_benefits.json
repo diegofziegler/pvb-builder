@@ -1,0 +1,60 @@
+{
+  "id": "revenue_benefits",
+  "step_number": 7,
+  "title": "7. Flujos de Ingresos y/o Beneficios",
+  "status": "specified",
+  "prompt_path": "data/07_ingresos_beneficios_prompt.md",
+  "output_path": "feedback/revenue_benefits_response.md",
+  "depends_on": [
+    "vision",
+    "target",
+    "business_value",
+    "need",
+    "pps",
+    "competition",
+    "channels",
+    "investment"
+  ],
+  "instructions": "Debe obtener una lista editable de items que describan ingresos y/o beneficios esperados para construir una vision preliminar del caso de negocio.\n\nCada item debe intentar cuantificar el beneficio esperado. Si no hay ingresos directos, puede expresar ahorro, eficiencia, mejora de experiencia u otro impacto. Cuando aplique a UX o experiencia, debe indicar a cuantos individuos afecta o que poblacion se veria impactada.",
+  "form": {
+    "entry_label": "Item de ingreso o beneficio",
+    "entry_placeholder": "Ejemplo: Reducir un 15% el tiempo de gestion de autorizaciones para aproximadamente 500 usuarios internos.",
+    "entry_lines": 2,
+    "add_button_label": "agregar",
+    "load_button_label": "cargar seleccionado",
+    "update_button_label": "actualizar",
+    "delete_button_label": "eliminar",
+    "list_label": "Lista de ingresos y/o beneficios",
+    "selected_item_label": "Item seleccionado para editar o eliminar",
+    "submit_label": "Procesar",
+    "output_label": "Resultado",
+    "output_lines": 16,
+    "previous_step_label": "Volver al paso anterior",
+    "next_step_label": "Estoy conforme, ir al octavo paso"
+  },
+  "list_behavior": {
+    "add": "Al presionar agregar, la oracion escrita se adiciona a la lista de items si no esta vacia y no existe ya en la lista.",
+    "load": "Al seleccionar un item y presionar cargar seleccionado, el item se copia al campo de texto para editarlo.",
+    "update": "Al presionar actualizar, el item seleccionado se reemplaza por el texto editado si no esta vacio y no genera duplicados.",
+    "delete": "Al seleccionar un item de la lista y presionar eliminar, ese item se remueve para permitir correcciones.",
+    "duplicates": "No se deben agregar duplicados exactos ni equivalentes por mayusculas, minusculas o espacios.",
+    "empty_values": "No se deben agregar valores vacios.",
+    "minimum_items_to_process": 1
+  },
+  "validation_rules": [
+    "Debe existir al menos un item de ingreso o beneficio.",
+    "La lista no puede estar vacia.",
+    "No pueden existir items repetidos.",
+    "Cada item debe estar escrito como una oracion clara.",
+    "Cada item debe expresar un ingreso, ahorro, eficiencia, mejora de experiencia u otro beneficio esperado.",
+    "Cada item debe intentar cuantificar el beneficio o indicar que dato falta para poder cuantificarlo.",
+    "Cuando el beneficio sea de experiencia o UX, debe indicar a cuantos individuos afecta o que poblacion se veria impactada.",
+    "La terminologia utilizada debe ser entendible para un Jefe o Gerente.",
+    "Los items deben mantener coherencia con la Vision, el Target, el Valor de Negocio, la Necesidad, la Solucion Propuesta, Canales e Inversion definidos previamente."
+  ],
+  "model_output_sections": [
+    "Ingresos y beneficios validados",
+    "Validacion",
+    "Ajustes sugeridos"
+  ]
+}

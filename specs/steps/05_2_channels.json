@@ -1,0 +1,49 @@
+{
+  "id": "channels",
+  "step_number": 5.2,
+  "title": "5.2. Canales y Medios",
+  "status": "implemented",
+  "prompt_path": "data/05_2_canales_medios_prompt.md",
+  "output_path": "feedback/channels_response.md",
+  "depends_on": ["vision", "target", "business_value", "need", "pps", "competition"],
+  "instructions": "Debe obtener una lista editable de canales y medios para llegar a los beneficiarios de la solucion.\n\nCada item debe indicar como se llegara a los beneficiarios y que canal o medio se utilizara.",
+  "form": {
+    "entry_label": "Item de canal o medio",
+    "entry_placeholder": "Ejemplo: Comunicar la solucion mediante el portal interno y capacitaciones online para los equipos beneficiarios.",
+    "entry_lines": 2,
+    "add_button_label": "agregar",
+    "load_button_label": "cargar seleccionado",
+    "update_button_label": "actualizar",
+    "delete_button_label": "eliminar",
+    "list_label": "Lista de canales y medios",
+    "selected_item_label": "Item seleccionado para editar o eliminar",
+    "submit_label": "Procesar",
+    "output_label": "Resultado",
+    "output_lines": 16,
+    "previous_step_label": "Volver al paso anterior",
+    "next_step_label": "Estoy conforme, ir al sexto paso"
+  },
+  "list_behavior": {
+    "add": "Al presionar agregar, la oracion escrita se adiciona a la lista si no esta vacia y no existe ya en la lista.",
+    "load": "Al seleccionar un item y presionar cargar seleccionado, el item se copia al campo de texto para editarlo.",
+    "update": "Al presionar actualizar, el item seleccionado se reemplaza por el texto editado si no esta vacio y no genera duplicados.",
+    "delete": "Al seleccionar un item de la lista y presionar eliminar, ese item se remueve para permitir correcciones.",
+    "duplicates": "No se deben agregar duplicados exactos ni equivalentes por mayusculas, minusculas o espacios.",
+    "empty_values": "No se deben agregar valores vacios.",
+    "minimum_items_to_process": 1
+  },
+  "validation_rules": [
+    "Debe existir al menos un canal o medio.",
+    "La lista no puede estar vacia.",
+    "No pueden existir items repetidos.",
+    "Cada item debe estar escrito como una oracion clara.",
+    "Cada item debe describir un canal o medio concreto.",
+    "Cada item debe explicar como se llegara a los beneficiarios.",
+    "Los items deben mantener coherencia con el Target y los pasos previos."
+  ],
+  "model_output_sections": [
+    "Canales y medios validados",
+    "Validacion",
+    "Ajustes sugeridos"
+  ]
+}

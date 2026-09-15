@@ -1,0 +1,36 @@
+{
+  "id": "vision",
+  "step_number": 1,
+  "title": "1. Vision",
+  "status": "implemented",
+  "prompt_path": "data/01_vision_prompt.md",
+  "output_path": "feedback/vision_response.md",
+  "instructions": "Debe ser redactada como una frase breve (7 a 12 palabras).\n\nTiene que sintetizar la motivacion central de la iniciativa y su impacto positivo deseado.\n\nDebe estar orientada al negocio y tener un enfoque estrategico, conectando la iniciativa con valor para **El Negocio**.\n\nDebe responder las siguientes preguntas:\n\n- Cual es su motivacion para crear una nueva solucion?\n- Que cambio positivo deberia provocar?\n- Que valor estrategico o de negocio deberia habilitar?.\nbrinda al menos 3 posibles opciones para la Visión propuesta, para que podamos seleccionar una de ellas o pensar una nueva.",
+  "form": {
+    "comment_label": "Tus comentarios",
+    "comment_placeholder": "Describi la iniciativa, el problema que queres resolver y el cambio positivo esperado...",
+    "comment_lines": 8,
+    "submit_label": "Procesar",
+    "output_label": "Resultado",
+    "output_lines": 14,
+    "next_step_label": "Estoy conforme, ir al segundo paso"
+  },
+  "validation_rules": [
+    "La Vision no puede estar vacia.",
+    "La Vision debe ser una oracion.",
+    "La Vision debe tener entre 7 y 12 palabras.",
+    "La Vision debe sintetizar la motivacion central de la iniciativa.",
+    "La Vision debe expresar el impacto positivo deseado.",
+    "La Vision debe estar orientada al negocio y tener un enfoque estrategico.",
+    "La Vision debe conectar la iniciativa con valor para **El Negocio**.",
+    "La Vision no debe quedar redactada como descripcion tecnica, funcionalidad o tarea de implementacion.",
+    "La Vision debe evitar terminos demasiado tecnicos, jerga interna o nombres de componentes tecnologicos salvo que sean imprescindibles para el negocio.",
+    "La Vision debe responder por que crear la solucion y que cambio positivo debe provocar.",
+    "La Vision debe ser coherente con **El Negocio**."
+  ],
+  "model_output_sections": [
+    "Vision propuesta",
+    "Validacion",
+    "Ajustes sugeridos"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "id": "competition",
+  "step_number": 5.1,
+  "title": "5.1. Soluciones Similares",
+  "status": "implemented",
+  "prompt_path": "data/05_1_competencia_prompt.md",
+  "output_path": "feedback/competition_response.md",
+  "depends_on": ["vision", "target", "business_value", "need", "pps"],
+  "instructions": "Debe obtener una lista editable de soluciones similares, competidores o alternativas comparables.\n\nLa respuesta No aplica es valida y debe aparecer como opcion por defecto.",
+  "form": {
+    "entry_label": "Item de solucion similar o competidor",
+    "entry_placeholder": "Ejemplo: Existe un portal interno que resuelve parcialmente el seguimiento de autorizaciones.",
+    "entry_lines": 2,
+    "add_button_label": "agregar",
+    "load_button_label": "cargar seleccionado",
+    "update_button_label": "actualizar",
+    "delete_button_label": "eliminar",
+    "list_label": "Lista de soluciones similares",
+    "selected_item_label": "Item seleccionado para editar o eliminar",
+    "submit_label": "Procesar",
+    "output_label": "Resultado",
+    "output_lines": 16,
+    "previous_step_label": "Volver al paso anterior",
+    "next_step_label": "Estoy conforme, ir al paso 5.2",
+    "default_items": ["No aplica"]
+  },
+  "list_behavior": {
+    "add": "Al presionar agregar, la oracion escrita se adiciona a la lista si no esta vacia y no existe ya en la lista.",
+    "load": "Al seleccionar un item y presionar cargar seleccionado, el item se copia al campo de texto para editarlo.",
+    "update": "Al presionar actualizar, el item seleccionado se reemplaza por el texto editado si no esta vacio y no genera duplicados.",
+    "delete": "Al seleccionar un item de la lista y presionar eliminar, ese item se remueve para permitir correcciones.",
+    "duplicates": "No se deben agregar duplicados exactos ni equivalentes por mayusculas, minusculas o espacios.",
+    "empty_values": "No se deben agregar valores vacios.",
+    "minimum_items_to_process": 1,
+    "no_aplica_allowed": true
+  },
+  "validation_rules": [
+    "La lista no puede estar vacia.",
+    "La respuesta No aplica es valida.",
+    "No pueden existir items repetidos.",
+    "Cada item debe estar escrito como una oracion clara, salvo el item No aplica.",
+    "Cada item debe describir una solucion similar, competidor o alternativa comparable, salvo cuando sea No aplica.",
+    "Los items deben mantener coherencia con los pasos previos."
+  ],
+  "model_output_sections": [
+    "Soluciones similares validadas",
+    "Validacion",
+    "Ajustes sugeridos"
+  ]
+}

@@ -1,0 +1,69 @@
+---
+references:
+  - "File: /app.py"
+generationTime: 2026-06-15T23:00:55.961Z
+---
+flowchart TD
+    A(("Start / app init"))
+    B["Load .env and step specifications"]
+    C["Build Gradio UI and event bindings"]
+    D{"User triggers action"}
+    E["Build step payload"]
+    F{"Input valid?"}
+    G[[call_openai_step]]
+    H["Resolve LLM model and API key"]
+    I{"API key configured?"}
+    J{"Provider"}
+    K["call_openai_model"]
+    L["call_gemini_model"]
+    M["save_latest_response"]
+    N["log_openai_interaction"]
+    O[(OpenAI interactions log)]
+    P(["Return result or error"])
+    Q["Save current session"]
+    R["Collect raw inputs"]
+    S["Generate session markdown document"]
+    T[(Read validated session outputs)]
+    U["Write session file"]
+    V["Log session event"]
+    W["Restore session file"]
+    X["Extract session state"]
+    Y["Restore active feedback files"]
+    Z(["Return restored session"])
+
+    A --> B
+    B --> C
+    C --> D
+    D -->|Generate step| E
+    D -->|Save session| Q
+    D -->|Load session| W
+
+    E --> F
+    F -->|No| P
+    F -->|Yes| G
+
+    G --> H
+    H --> I
+    I -->|No| P
+    I -->|Yes| J
+    J -->|openai| K
+    J -->|gemini| L
+    J -->|unsupported| P
+
+    K --> M
+    L --> M
+    M --> N
+    N --> O
+    N --> P
+
+    Q --> R
+    R --> S
+    S --> T
+    T --> U
+    U --> V
+    V --> P
+
+    W --> X
+    X --> Y
+    Y --> V
+    V --> Z

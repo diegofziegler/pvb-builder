@@ -1,0 +1,105 @@
+{
+  "id": "investment",
+  "step_number": 6,
+  "title": "6. Inversion",
+  "status": "implemented",
+  "prompt_path": "data/06_inversion_prompt.md",
+  "output_path": "feedback/investment_response.md",
+  "depends_on": [
+    "vision",
+    "target",
+    "business_value",
+    "need",
+    "pps",
+    "competition",
+    "channels"
+  ],
+  "instructions": "Debe capturar la inversion estimada para desarrollar o implementar la solucion.\n\nEn este paso, presupuesto se interpreta como una idea macro de esfuerzo: cantidad de horas, FTEs y equipos o personas participantes. No se requiere estimar montos economicos.\n\nCada item representa un equipo participante e incluye nombre de equipo, cantidad de horas, rol a desempenar y FTE calculado como horas / 160.\n\nLa aplicacion debe calcular total de horas y total de FTEs, y capturar fechas tentativas de inicio y fin.",
+  "form": {
+    "team_label": "Nombre de Equipo",
+    "team_placeholder": "Ejemplo: Equipo de Integraciones",
+    "hours_label": "Cantidad de horas",
+    "hours_placeholder": "Ejemplo: 320",
+    "role_label": "Rol a desempenar",
+    "role_placeholder": "Ejemplo: Implementar integraciones necesarias con sistemas internos.",
+    "fte_label": "FTE",
+    "fte_readonly": true,
+    "add_button_label": "agregar",
+    "load_button_label": "cargar seleccionado",
+    "update_button_label": "modificar",
+    "delete_button_label": "eliminar",
+    "list_label": "Lista de equipos participantes",
+    "selected_item_label": "Equipo seleccionado para modificar o eliminar",
+    "estimate_label": "Estimacion",
+    "estimate_template": "Total Horas: {total_hours}\nTotal FTEs: {total_ftes}",
+    "start_date_label": "Fecha Tentativa inicio",
+    "end_date_label": "Fecha Tentativa fin",
+    "date_format": "AAAA-MM-DD",
+    "submit_label": "Procesar",
+    "output_label": "Resultado",
+    "output_lines": 16,
+    "previous_step_label": "Volver al paso anterior",
+    "next_step_label": "Estoy conforme, ir al septimo paso"
+  },
+  "item_schema": {
+    "team_name": {
+      "label": "Nombre de Equipo",
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "hours": {
+      "label": "Cantidad de horas",
+      "type": "integer",
+      "required": true,
+      "minimum": 1
+    },
+    "role": {
+      "label": "Rol a desempenar",
+      "type": "string",
+      "required": true
+    },
+    "fte": {
+      "label": "FTE",
+      "type": "number",
+      "readonly": true,
+      "formula": "hours / 160"
+    }
+  },
+  "calculation_rules": {
+    "fte_per_item": "hours / 160",
+    "total_hours": "sum(item.hours)",
+    "total_ftes": "total_hours / 160",
+    "fte_precision": 2,
+    "duplicate_comparison": "team_name"
+  },
+  "list_behavior": {
+    "add": "Al presionar agregar, se adiciona un item compuesto por Nombre de Equipo, Cantidad de horas, Rol a desempenar y FTE calculado.",
+    "load": "Al seleccionar un item y presionar cargar seleccionado, sus valores se copian a los campos para modificarlos.",
+    "update": "Al presionar modificar, el item seleccionado se reemplaza por los valores editados si son validos y no generan duplicados por Nombre de Equipo.",
+    "delete": "Al seleccionar un item y presionar eliminar, ese item se remueve de la lista.",
+    "duplicates": "No se deben agregar equipos repetidos. La comparacion de repetidos se realiza solamente por Nombre de Equipo.",
+    "minimum_items_to_process": 1
+  },
+  "validation_rules": [
+    "La lista de equipos participantes no puede estar vacia.",
+    "No pueden existir equipos repetidos; la comparacion se realiza solamente por Nombre de Equipo.",
+    "Nombre de Equipo no puede estar vacio.",
+    "Cantidad de horas debe ser un numero entero.",
+    "Cantidad de horas debe ser mayor a cero.",
+    "Rol a desempenar debe ser un texto explicativo a nivel macro.",
+    "FTE debe ser de solo lectura y calcularse como Cantidad de horas / 160.",
+    "Total Horas debe ser la suma de todas las horas cargadas.",
+    "Total FTEs debe calcularse como Total Horas / 160.",
+    "El presupuesto debe interpretarse como esfuerzo estimado en horas, FTEs y equipos o personas participantes, no como monto economico.",
+    "Fecha Tentativa inicio debe usar formato AAAA-MM-DD.",
+    "Fecha Tentativa fin debe usar formato AAAA-MM-DD.",
+    "Fecha Tentativa fin no deberia ser anterior a Fecha Tentativa inicio."
+  ],
+  "model_output_sections": [
+    "Inversion validada",
+    "Totales",
+    "Validacion",
+    "Ajustes sugeridos"
+  ]
+}

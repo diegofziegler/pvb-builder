@@ -1,0 +1,51 @@
+{
+  "id": "pps",
+  "step_number": 5,
+  "title": "5. Producto / Proceso / Servicio",
+  "status": "implemented",
+  "prompt_path": "data/05_pps_prompt.md",
+  "output_path": "feedback/pps_response.md",
+  "depends_on": ["vision", "target", "business_value", "need"],
+  "instructions": "Debe obtener una lista editable de items que describan la solucion propuesta.\n\nCada item debe indicar que Producto, Proceso o Servicio se creara, incorporara o modificara para resolver la necesidad.",
+  "form": {
+    "entry_label": "Item de Producto / Proceso / Servicio",
+    "entry_placeholder": "Ejemplo: Incorporar un flujo digital de autorizaciones con reglas de validacion automatizadas.",
+    "entry_lines": 2,
+    "add_button_label": "agregar",
+    "load_button_label": "cargar seleccionado",
+    "update_button_label": "actualizar",
+    "delete_button_label": "eliminar",
+    "list_label": "Lista de items de Producto / Proceso / Servicio",
+    "selected_item_label": "Item seleccionado para editar o eliminar",
+    "submit_label": "Procesar",
+    "output_label": "Resultado",
+    "output_lines": 16,
+    "previous_step_label": "Volver al paso anterior",
+    "next_step_label": "Estoy conforme, ir al paso 5.1"
+  },
+  "list_behavior": {
+    "add": "Al presionar agregar, la oracion escrita se adiciona a la lista de items si no esta vacia y no existe ya en la lista.",
+    "load": "Al seleccionar un item y presionar cargar seleccionado, el item se copia al campo de texto para editarlo.",
+    "update": "Al presionar actualizar, el item seleccionado se reemplaza por el texto editado si no esta vacio y no genera duplicados.",
+    "delete": "Al seleccionar un item de la lista y presionar eliminar, ese item se remueve para permitir correcciones.",
+    "duplicates": "No se deben agregar duplicados exactos ni equivalentes por mayusculas, minusculas o espacios.",
+    "empty_values": "No se deben agregar valores vacios.",
+    "minimum_items_to_process": 1
+  },
+  "validation_rules": [
+    "Debe existir al menos un item de Producto / Proceso / Servicio.",
+    "La lista de items no puede estar vacia.",
+    "No pueden existir items repetidos.",
+    "Cada item debe estar escrito como una oracion clara.",
+    "Cada item debe describir una solucion propuesta, no solo una necesidad o un problema.",
+    "Cada item debe indicar si se trata de un Producto, Proceso o Servicio.",
+    "Cada item debe aclarar si se creara, incorporara o modificara algo.",
+    "La terminologia tecnica utilizada debe ser entendible para un Jefe o Gerente.",
+    "Los items deben mantener coherencia con la Vision, el Target, el Valor de Negocio y la Necesidad definidos previamente."
+  ],
+  "model_output_sections": [
+    "Soluciones validadas",
+    "Validacion",
+    "Ajustes sugeridos"
+  ]
+}

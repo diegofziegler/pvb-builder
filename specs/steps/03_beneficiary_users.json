@@ -1,0 +1,9 @@
+{
+  "id": "beneficiary_users",
+  "step_number": null,
+  "title": "3. Usuarios beneficiarios",
+  "status": "replaced_by_target",
+  "replaced_by": "specs/steps/02_target.json",
+  "replacement_reason": "Los usuarios beneficiarios quedan representados dentro del paso 2 Target, que define la unidad o area beneficiaria y el segmento o grupo especifico objetivo.",
+  "instructions": "Este paso no debe implementarse como flujo independiente. La definicion y validacion de usuarios, grupos o segmentos beneficiarios debe resolverse dentro del paso 2 Target."
+}
