@@ -6,18 +6,18 @@ import app
 
 
 class LlmModelSelectionTests(unittest.TestCase):
-    def test_models_include_openai_and_gemini_with_gpt5_as_default(self):
+    def test_models_include_gemini_first_and_gemini25_as_default(self):
         self.assertEqual(
             app.LLM_MODEL_DROPDOWN_CHOICES,
             [
+                ("Gemini 2.5 flash-lite", "gemini:gemini-2.5-flash-lite"),
+                ("Gemini 3.5 Flash", "gemini:gemini-3.5-flash"),
                 ("OpenAI GPT-4o mini", "openai:gpt-4o-mini"),
                 ("OpenAI GPT-5 mini", "openai:gpt-5-mini"),
                 ("OpenAI GPT-5", "openai:gpt-5"),
-                ("Gemini 2.5 Flash-Lite", "gemini:gemini-2.5-flash-lite"),
-                ("Gemini 3.5 Flash", "gemini:gemini-3.5-flash"),
             ],
         )
-        self.assertEqual(app.DEFAULT_LLM_MODEL_ID, "openai:gpt-5")
+        self.assertEqual(app.DEFAULT_LLM_MODEL_ID, "gemini:gemini-2.5-flash-lite")
 
     def test_resolves_selected_openai_model_configuration(self):
         selected_model = app.resolve_llm_model("openai:gpt-5-mini")
@@ -49,13 +49,12 @@ class LlmModelSelectionTests(unittest.TestCase):
 
     def test_process_vision_locks_model_selector_after_success(self):
         with patch.object(app, "build_vision", return_value="Vision validada."):
-            result, next_step_update, model_update = app.process_vision_and_lock_model(
+            result, model_update = app.process_vision_and_lock_model(
                 "Reducir tiempos de atencion.",
                 "gemini:gemini-2.5-flash-lite",
             )
 
         self.assertEqual(result, "Vision validada.")
-        self.assertTrue(next_step_update["visible"])
         self.assertEqual(model_update["value"], "gemini:gemini-2.5-flash-lite")
         self.assertFalse(model_update["interactive"])
 

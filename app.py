@@ -36,6 +36,18 @@ DEFAULT_LLM_MODEL_ID = "gemini:gemini-2.5-flash-lite"
 SESSION_STATE_WARNING = "<!-- No modificar esta sección para mantener el estado. -->"
 SESSION_STATE_FENCE = "```json pvb-session-state"
 LLM_MODEL_OPTIONS = {
+    "gemini:gemini-2.5-flash-lite": {
+        "label": "Gemini 2.5 flash-lite",
+        "provider": "gemini",
+        "model": "gemini-2.5-flash-lite",
+        "api_key_env": "GEMINI_API_KEY",
+    },
+    "gemini:gemini-3.5-flash": {
+        "label": "Gemini 3.5 Flash",
+        "provider": "gemini",
+        "model": "gemini-3.5-flash",
+        "api_key_env": "GEMINI_API_KEY",
+    },
     "openai:gpt-4o-mini": {
         "label": "OpenAI GPT-4o mini",
         "provider": "openai",
@@ -53,18 +65,6 @@ LLM_MODEL_OPTIONS = {
         "provider": "openai",
         "model": "gpt-5",
         "api_key_env": "OPENAI_API_KEY",
-    },
-    "gemini:gemini-2.5-flash-lite": {
-        "label": "Gemini 2.5 Flash-Lite",
-        "provider": "gemini",
-        "model": "gemini-2.5-flash-lite",
-        "api_key_env": "GEMINI_API_KEY",
-    },
-    "gemini:gemini-3.5-flash": {
-        "label": "Gemini 3.5 Flash",
-        "provider": "gemini",
-        "model": "gemini-3.5-flash",
-        "api_key_env": "GEMINI_API_KEY",
     },
 }
 LLM_MODEL_DROPDOWN_CHOICES = [
@@ -425,23 +425,21 @@ def build_vision(user_comments: str, selected_model_id: str | None = None) -> st
     )
 
 
-def process_vision(user_comments: str, selected_model_id: str | None = None) -> tuple[str, gr.Button]:
-    result = build_vision(user_comments, selected_model_id)
-    can_continue = bool(user_comments.strip()) and not result.startswith("Falta configurar")
-    return result, gr.update(visible=can_continue)
+def process_vision(user_comments: str, selected_model_id: str | None = None) -> str:
+    return build_vision(user_comments, selected_model_id)
 
 
 def process_vision_and_lock_model(
     user_comments: str,
     selected_model_id: str | None = None,
-) -> tuple[str, gr.Button, gr.Dropdown]:
-    result, next_step_update = process_vision(user_comments, selected_model_id)
-    can_continue = bool(next_step_update.get("visible"))
+) -> tuple[str, gr.Dropdown]:
+    result = process_vision(user_comments, selected_model_id)
+    can_lock = bool(user_comments.strip()) and not result.startswith("Falta configurar")
     model_update = gr.update(
         value=selected_model_id or DEFAULT_LLM_MODEL_ID,
-        interactive=not can_continue,
+        interactive=not can_lock,
     )
-    return result, next_step_update, model_update
+    return result, model_update
 
 
 def normalize_for_duplicate(value: str) -> str:
@@ -509,10 +507,8 @@ def build_target(items: list[str] | None, selected_model_id: str | None = None) 
     )
 
 
-def process_target(items: list[str] | None, selected_model_id: str | None = None) -> tuple[str, gr.Button]:
-    result = build_target(items, selected_model_id)
-    can_continue = bool(items) and not result.startswith("Falta configurar")
-    return result, gr.update(visible=can_continue)
+def process_target(items: list[str] | None, selected_model_id: str | None = None) -> str:
+    return build_target(items, selected_model_id)
 
 
 def format_items(items: list[str]) -> str:
@@ -904,12 +900,18 @@ def build_session_markdown_content(
     return "\n".join(sections).strip() + "\n"
 
 
+def suggest_session_filename(case_name: str) -> str:
+    cleaned = sanitize_export_basename(case_name)
+    return f"{cleaned}.md" if cleaned else "pvb-example.md"
+
+
 def generate_session_markdown_document(
     session_name: str,
     raw_inputs: dict | None,
     selected_model_id: str | None = None,
     generated_at: datetime | None = None,
     validated_outputs: dict | None = None,
+    custom_filename: str | None = None,
 ) -> tuple[str, str]:
     generated_at = generated_at or datetime.now()
     validated_outputs = (
@@ -917,7 +919,11 @@ def generate_session_markdown_document(
         if validated_outputs is not None
         else read_validated_session_outputs()
     )
-    filename = build_session_filename(session_name, generated_at)
+    if custom_filename and custom_filename.strip():
+        clean_fn = custom_filename.strip()
+        filename = clean_fn if clean_fn.endswith(".md") else f"{clean_fn}.md"
+    else:
+        filename = build_session_filename(session_name, generated_at)
     output_path = FEEDBACK_DIR / filename
     FEEDBACK_DIR.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
@@ -936,7 +942,7 @@ def generate_session_markdown_document(
         "success",
         {"completed_steps": len(validated_outputs)},
     )
-    return f"Sesion guardada: {output_path}", str(output_path)
+    return f"Sesion guardada: {output_path.name}", str(output_path)
 
 
 def collect_session_raw_inputs(
@@ -1089,8 +1095,9 @@ def list_session_files() -> list[str]:
     )
 
 
-def save_current_session(
+def save_current_session_by_filename(
     session_name: str,
+    session_filename: str,
     selected_model_id: str | None,
     vision_comments: str,
     target_items: list[str] | None,
@@ -1122,7 +1129,12 @@ def save_current_session(
     channels_output: str,
     investment_output: str,
     revenue_output: str,
-) -> tuple[str, str, gr.Dropdown]:
+) -> str:
+    if not session_name or not session_name.strip():
+        return "Error: 'Nombre de sesion / caso' es obligatorio."
+    if not session_filename or not session_filename.strip():
+        return "Error: 'Nombre de la sesión' es obligatorio."
+
     raw_inputs = collect_session_raw_inputs(
         vision_comments,
         target_items,
@@ -1157,14 +1169,88 @@ def save_current_session(
         investment_output,
         revenue_output,
     )
-    status, output_path = generate_session_markdown_document(
-        session_name,
+    status, _ = generate_session_markdown_document(
+        session_name.strip(),
         raw_inputs,
         selected_model_id,
         validated_outputs=validated_outputs,
+        custom_filename=session_filename.strip(),
     )
-    file_name = Path(output_path).name
-    return status, output_path, gr.update(choices=list_session_files(), value=file_name)
+    return status
+
+
+def save_current_session(
+    session_name: str,
+    selected_model_id: str | None,
+    vision_comments: str,
+    target_items: list[str] | None,
+    target_draft_item: str,
+    business_items: list[str] | None,
+    business_draft_item: str,
+    need_items: list[str] | None,
+    need_draft_item: str,
+    pps_items: list[str] | None,
+    pps_draft_item: str,
+    competition_items: list[str] | None,
+    competition_draft_item: str,
+    channels_items: list[str] | None,
+    channels_draft_item: str,
+    investment_items: list[dict] | None,
+    investment_team: str,
+    investment_hours: object,
+    investment_role: str,
+    investment_start_date: str,
+    investment_end_date: str,
+    revenue_items: list[str] | None,
+    revenue_draft_item: str,
+    vision_output: str,
+    target_output: str,
+    business_output: str,
+    need_output: str,
+    pps_output: str,
+    competition_output: str,
+    channels_output: str,
+    investment_output: str,
+    revenue_output: str,
+) -> tuple[str, str, gr.Dropdown]:
+    filename = suggest_session_filename(session_name)
+    status = save_current_session_by_filename(
+        session_name,
+        filename,
+        selected_model_id,
+        vision_comments,
+        target_items,
+        target_draft_item,
+        business_items,
+        business_draft_item,
+        need_items,
+        need_draft_item,
+        pps_items,
+        pps_draft_item,
+        competition_items,
+        competition_draft_item,
+        channels_items,
+        channels_draft_item,
+        investment_items,
+        investment_team,
+        investment_hours,
+        investment_role,
+        investment_start_date,
+        investment_end_date,
+        revenue_items,
+        revenue_draft_item,
+        vision_output,
+        target_output,
+        business_output,
+        need_output,
+        pps_output,
+        competition_output,
+        channels_output,
+        investment_output,
+        revenue_output,
+    )
+    output_path = str(FEEDBACK_DIR / filename)
+    return status, output_path, gr.update(choices=list_session_files(), value=filename)
 
 
 def refresh_session_file_choices() -> gr.Dropdown:
@@ -1184,116 +1270,256 @@ def session_validated_output(state: dict, step_id: str) -> str:
     return str(validated_outputs.get(step_id, "") or "")
 
 
-def build_loaded_session_outputs(status: str, state: dict) -> tuple:
-    target_raw = session_raw_step(state, "target")
-    target_items_value = list(target_raw.get("items") or [])
-    business_raw = session_raw_step(state, "business_value")
-    business_items_value = list(business_raw.get("items") or [])
-    need_raw = session_raw_step(state, "need")
-    need_items_value = list(need_raw.get("items") or [])
-    pps_raw = session_raw_step(state, "pps")
-    pps_items_value = list(pps_raw.get("items") or [])
-    competition_raw = session_raw_step(state, "competition")
-    competition_items_value = list(competition_raw.get("items") or [])
-    channels_raw = session_raw_step(state, "channels")
-    channels_items_value = list(channels_raw.get("items") or [])
-    investment_raw = session_raw_step(state, "investment")
-    investment_items_value = list(investment_raw.get("items") or [])
-    investment_draft = investment_raw.get("draft_item") or {}
-    if not isinstance(investment_draft, dict):
-        investment_draft = {}
-    revenue_raw = session_raw_step(state, "revenue_benefits")
-    revenue_items_value = list(revenue_raw.get("items") or [])
+def build_loaded_session_outputs(status: str, state: dict, current_model: str = DEFAULT_LLM_MODEL_ID) -> tuple:
+    raw_inputs = state.get("raw_inputs", {})
+    validated_outputs = state.get("validated_outputs", {})
 
-    vision_output = session_validated_output(state, "vision")
-    target_output_value = session_validated_output(state, "target")
-    business_output_value = session_validated_output(state, "business_value")
-    need_output_value = session_validated_output(state, "need")
-    pps_output_value = session_validated_output(state, "pps")
-    competition_output_value = session_validated_output(state, "competition")
-    channels_output_value = session_validated_output(state, "channels")
-    investment_output_value = session_validated_output(state, "investment")
-    revenue_output_value = session_validated_output(state, "revenue_benefits")
-    investment_hours_value = investment_draft.get("hours")
+    case_name_out = state.get("session_name", gr.update())
+    model_out = gr.update(
+        value=state.get("selected_model_id", current_model),
+        interactive=False,
+    ) if "selected_model_id" in state else gr.update()
+
+    # Vision
+    if "vision" in raw_inputs or "vision" in validated_outputs:
+        v_raw = raw_inputs.get("vision", {})
+        vision_comments_out = v_raw.get("comments", "")
+        vision_output_out = validated_outputs.get("vision", "")
+    else:
+        vision_comments_out = gr.update()
+        vision_output_out = gr.update()
+
+    # Target
+    if "target" in raw_inputs or "target" in validated_outputs:
+        t_raw = raw_inputs.get("target", {})
+        t_items = list(t_raw.get("items") or [])
+        target_items_out = t_items
+        target_display_out = format_items(t_items)
+        target_dropdown_out = gr.update(choices=t_items, value=None)
+        target_draft_out = t_raw.get("draft_item", "")
+        target_output_out = validated_outputs.get("target", "")
+    else:
+        target_items_out = gr.update()
+        target_display_out = gr.update()
+        target_dropdown_out = gr.update()
+        target_draft_out = gr.update()
+        target_output_out = gr.update()
+
+    # Business Value
+    if "business_value" in raw_inputs or "business_value" in validated_outputs:
+        b_raw = raw_inputs.get("business_value", {})
+        b_items = list(b_raw.get("items") or [])
+        bv_items_out = b_items
+        bv_display_out = format_items(b_items)
+        bv_dropdown_out = gr.update(choices=b_items, value=None)
+        bv_draft_out = b_raw.get("draft_item", "")
+        bv_output_out = validated_outputs.get("business_value", "")
+    else:
+        bv_items_out = gr.update()
+        bv_display_out = gr.update()
+        bv_dropdown_out = gr.update()
+        bv_draft_out = gr.update()
+        bv_output_out = gr.update()
+
+    # Need
+    if "need" in raw_inputs or "need" in validated_outputs:
+        n_raw = raw_inputs.get("need", {})
+        n_items = list(n_raw.get("items") or [])
+        need_items_out = n_items
+        need_display_out = format_items(n_items)
+        need_dropdown_out = gr.update(choices=n_items, value=None)
+        need_draft_out = n_raw.get("draft_item", "")
+        need_output_out = validated_outputs.get("need", "")
+    else:
+        need_items_out = gr.update()
+        need_display_out = gr.update()
+        need_dropdown_out = gr.update()
+        need_draft_out = gr.update()
+        need_output_out = gr.update()
+
+    # PPS
+    if "pps" in raw_inputs or "pps" in validated_outputs:
+        p_raw = raw_inputs.get("pps", {})
+        p_items = list(p_raw.get("items") or [])
+        pps_items_out = p_items
+        pps_display_out = format_items(p_items)
+        pps_dropdown_out = gr.update(choices=p_items, value=None)
+        pps_draft_out = p_raw.get("draft_item", "")
+        pps_output_out = validated_outputs.get("pps", "")
+    else:
+        pps_items_out = gr.update()
+        pps_display_out = gr.update()
+        pps_dropdown_out = gr.update()
+        pps_draft_out = gr.update()
+        pps_output_out = gr.update()
+
+    # Competition
+    if "competition" in raw_inputs or "competition" in validated_outputs:
+        c_raw = raw_inputs.get("competition", {})
+        c_items = list(c_raw.get("items") or [])
+        comp_items_out = c_items
+        comp_display_out = format_items(c_items)
+        comp_dropdown_out = gr.update(choices=c_items, value=None)
+        comp_draft_out = c_raw.get("draft_item", "")
+        comp_output_out = validated_outputs.get("competition", "")
+    else:
+        comp_items_out = gr.update()
+        comp_display_out = gr.update()
+        comp_dropdown_out = gr.update()
+        comp_draft_out = gr.update()
+        comp_output_out = gr.update()
+
+    # Channels
+    if "channels" in raw_inputs or "channels" in validated_outputs:
+        ch_raw = raw_inputs.get("channels", {})
+        ch_items = list(ch_raw.get("items") or [])
+        chan_items_out = ch_items
+        chan_display_out = format_items(ch_items)
+        chan_dropdown_out = gr.update(choices=ch_items, value=None)
+        chan_draft_out = ch_raw.get("draft_item", "")
+        chan_output_out = validated_outputs.get("channels", "")
+    else:
+        chan_items_out = gr.update()
+        chan_display_out = gr.update()
+        chan_dropdown_out = gr.update()
+        chan_draft_out = gr.update()
+        chan_output_out = gr.update()
+
+    # Investment
+    if "investment" in raw_inputs or "investment" in validated_outputs:
+        i_raw = raw_inputs.get("investment", {})
+        i_items = list(i_raw.get("items") or [])
+        i_draft = i_raw.get("draft_item") or {}
+        if not isinstance(i_draft, dict):
+            i_draft = {}
+        inv_items_out = i_items
+        inv_display_out = format_investment_items(i_items)
+        inv_dropdown_out = gr.update(choices=investment_dropdown_choices(i_items), value=None)
+        inv_team_out = i_draft.get("team_name", "")
+        inv_hours_out = i_draft.get("hours")
+        inv_role_out = i_draft.get("role", "")
+        inv_fte_out = calculate_investment_fte_display(inv_hours_out)
+        inv_est_out = format_investment_estimate(i_items)
+        inv_start_out = i_raw.get("start_date", "")
+        inv_end_out = i_raw.get("end_date", "")
+        inv_output_out = validated_outputs.get("investment", "")
+    else:
+        inv_items_out = gr.update()
+        inv_display_out = gr.update()
+        inv_dropdown_out = gr.update()
+        inv_team_out = gr.update()
+        inv_hours_out = gr.update()
+        inv_role_out = gr.update()
+        inv_fte_out = gr.update()
+        inv_est_out = gr.update()
+        inv_start_out = gr.update()
+        inv_end_out = gr.update()
+        inv_output_out = gr.update()
+
+    # Revenue Benefits
+    if "revenue_benefits" in raw_inputs or "revenue_benefits" in validated_outputs:
+        r_raw = raw_inputs.get("revenue_benefits", {})
+        r_items = list(r_raw.get("items") or [])
+        rev_items_out = r_items
+        rev_display_out = format_items(r_items)
+        rev_dropdown_out = gr.update(choices=r_items, value=None)
+        rev_draft_out = r_raw.get("draft_item", "")
+        rev_output_out = validated_outputs.get("revenue_benefits", "")
+    else:
+        rev_items_out = gr.update()
+        rev_display_out = gr.update()
+        rev_dropdown_out = gr.update()
+        rev_draft_out = gr.update()
+        rev_output_out = gr.update()
 
     return (
         status,
-        state.get("session_name", DEFAULT_EXPORT_BASENAME),
-        gr.update(
-            value=state.get("selected_model_id", DEFAULT_LLM_MODEL_ID),
-            interactive=False,
-        ),
-        session_raw_step(state, "vision").get("comments", ""),
-        vision_output,
-        gr.update(visible=bool(vision_output)),
-        target_items_value,
-        format_items(target_items_value),
-        gr.update(choices=target_items_value, value=None),
-        target_raw.get("draft_item", ""),
-        target_output_value,
-        gr.update(visible=bool(target_output_value)),
-        business_items_value,
-        format_items(business_items_value),
-        gr.update(choices=business_items_value, value=None),
-        business_raw.get("draft_item", ""),
-        business_output_value,
-        gr.update(visible=bool(business_output_value)),
-        need_items_value,
-        format_items(need_items_value),
-        gr.update(choices=need_items_value, value=None),
-        need_raw.get("draft_item", ""),
-        need_output_value,
-        gr.update(visible=bool(need_output_value)),
-        pps_items_value,
-        format_items(pps_items_value),
-        gr.update(choices=pps_items_value, value=None),
-        pps_raw.get("draft_item", ""),
-        pps_output_value,
-        gr.update(visible=bool(pps_output_value)),
-        competition_items_value,
-        format_items(competition_items_value),
-        gr.update(choices=competition_items_value, value=None),
-        competition_raw.get("draft_item", ""),
-        competition_output_value,
-        gr.update(visible=bool(competition_output_value)),
-        channels_items_value,
-        format_items(channels_items_value),
-        gr.update(choices=channels_items_value, value=None),
-        channels_raw.get("draft_item", ""),
-        channels_output_value,
-        gr.update(visible=bool(channels_output_value)),
-        investment_items_value,
-        format_investment_items(investment_items_value),
-        gr.update(choices=investment_dropdown_choices(investment_items_value), value=None),
-        investment_draft.get("team_name", ""),
-        investment_hours_value,
-        investment_draft.get("role", ""),
-        calculate_investment_fte_display(investment_hours_value),
-        format_investment_estimate(investment_items_value),
-        investment_raw.get("start_date", ""),
-        investment_raw.get("end_date", ""),
-        investment_output_value,
-        gr.update(visible=bool(investment_output_value)),
-        revenue_items_value,
-        format_items(revenue_items_value),
-        gr.update(choices=revenue_items_value, value=None),
-        revenue_raw.get("draft_item", ""),
-        revenue_output_value,
-        gr.update(visible=bool(revenue_output_value)),
+        case_name_out,
+        model_out,
+        vision_comments_out,
+        vision_output_out,
+        target_items_out,
+        target_display_out,
+        target_dropdown_out,
+        target_draft_out,
+        target_output_out,
+        bv_items_out,
+        bv_display_out,
+        bv_dropdown_out,
+        bv_draft_out,
+        bv_output_out,
+        need_items_out,
+        need_display_out,
+        need_dropdown_out,
+        need_draft_out,
+        need_output_out,
+        pps_items_out,
+        pps_display_out,
+        pps_dropdown_out,
+        pps_draft_out,
+        pps_output_out,
+        comp_items_out,
+        comp_display_out,
+        comp_dropdown_out,
+        comp_draft_out,
+        comp_output_out,
+        chan_items_out,
+        chan_display_out,
+        chan_dropdown_out,
+        chan_draft_out,
+        chan_output_out,
+        inv_items_out,
+        inv_display_out,
+        inv_dropdown_out,
+        inv_team_out,
+        inv_hours_out,
+        inv_role_out,
+        inv_fte_out,
+        inv_est_out,
+        inv_start_out,
+        inv_end_out,
+        inv_output_out,
+        rev_items_out,
+        rev_display_out,
+        rev_dropdown_out,
+        rev_draft_out,
+        rev_output_out,
     )
+
+
+def load_current_session_by_filename(
+    session_filename: str,
+    current_model: str,
+) -> tuple:
+    if not session_filename or not session_filename.strip():
+        return ("Error: 'Nombre de la sesión' es obligatorio.", *[gr.update() for _ in range(50)])
+
+    clean_filename = session_filename.strip()
+    if not clean_filename.endswith(".md"):
+        clean_filename += ".md"
+
+    session_path = FEEDBACK_DIR / clean_filename
+    if not session_path.exists():
+        alt_path = FEEDBACK_DIR / session_filename.strip()
+        if alt_path.exists():
+            session_path = alt_path
+        else:
+            return (f"Error: El archivo '{clean_filename}' no existe.", *[gr.update() for _ in range(50)])
+
+    status, state = restore_session_from_path(session_path)
+    if not state:
+        return (status, *[gr.update() for _ in range(50)])
+
+    return build_loaded_session_outputs(status, state, current_model)
 
 
 def load_session_into_ui(selected_session_file: str) -> tuple:
     if not selected_session_file:
         return (
             "Selecciona una sesion para cargar.",
-            *[gr.update() for _ in range(59)],
+            *[gr.update() for _ in range(50)],
         )
-    session_path = FEEDBACK_DIR / Path(selected_session_file).name
-    status, state = restore_session_from_path(session_path)
-    if not state:
-        return (status, *[gr.update() for _ in range(59)])
-    return build_loaded_session_outputs(status, state)
+    return load_current_session_by_filename(selected_session_file, DEFAULT_LLM_MODEL_ID)
 
 
 def build_business_value(items: list[str] | None, selected_model_id: str | None = None) -> str:
@@ -1774,34 +2000,24 @@ def build_revenue_benefits(items: list[str] | None, selected_model_id: str | Non
     )
 
 
-def process_business_value(items: list[str] | None, selected_model_id: str | None = None) -> tuple[str, gr.Button]:
-    result = build_business_value(items, selected_model_id)
-    can_continue = bool(items) and not result.startswith("Falta configurar")
-    return result, gr.update(visible=can_continue)
+def process_business_value(items: list[str] | None, selected_model_id: str | None = None) -> str:
+    return build_business_value(items, selected_model_id)
 
 
-def process_need(items: list[str] | None, selected_model_id: str | None = None) -> tuple[str, gr.Button]:
-    result = build_need(items, selected_model_id)
-    can_continue = bool(items) and not result.startswith("Falta configurar")
-    return result, gr.update(visible=can_continue)
+def process_need(items: list[str] | None, selected_model_id: str | None = None) -> str:
+    return build_need(items, selected_model_id)
 
 
-def process_pps(items: list[str] | None, selected_model_id: str | None = None) -> tuple[str, gr.Button]:
-    result = build_pps(items, selected_model_id)
-    can_continue = bool(items) and not result.startswith("Falta configurar")
-    return result, gr.update(visible=can_continue)
+def process_pps(items: list[str] | None, selected_model_id: str | None = None) -> str:
+    return build_pps(items, selected_model_id)
 
 
-def process_competition(items: list[str] | None, selected_model_id: str | None = None) -> tuple[str, gr.Button]:
-    result = build_competition(items, selected_model_id)
-    can_continue = bool(items) and not result.startswith("Falta configurar")
-    return result, gr.update(visible=can_continue)
+def process_competition(items: list[str] | None, selected_model_id: str | None = None) -> str:
+    return build_competition(items, selected_model_id)
 
 
-def process_channels(items: list[str] | None, selected_model_id: str | None = None) -> tuple[str, gr.Button]:
-    result = build_channels(items, selected_model_id)
-    can_continue = bool(items) and not result.startswith("Falta configurar")
-    return result, gr.update(visible=can_continue)
+def process_channels(items: list[str] | None, selected_model_id: str | None = None) -> str:
+    return build_channels(items, selected_model_id)
 
 
 def process_investment(
@@ -1809,55 +2025,51 @@ def process_investment(
     start_date: str,
     end_date: str,
     selected_model_id: str | None = None,
-) -> tuple[str, gr.Button]:
-    result = build_investment(items, start_date, end_date, selected_model_id)
-    blocking_prefixes = (
-        "Falta configurar",
-        "Agrega",
-        "La lista",
-        "Fecha Tentativa",
-    )
-    can_continue = bool(items) and not result.startswith(blocking_prefixes)
-    return result, gr.update(visible=can_continue)
+) -> str:
+    return build_investment(items, start_date, end_date, selected_model_id)
 
 
-def process_revenue_benefits(items: list[str] | None, selected_model_id: str | None = None) -> tuple[str, gr.Button]:
-    result = build_revenue_benefits(items, selected_model_id)
-    can_continue = bool(items) and not result.startswith("Falta configurar")
-    return result, gr.update(visible=can_continue)
+def process_revenue_benefits(items: list[str] | None, selected_model_id: str | None = None) -> str:
+    return build_revenue_benefits(items, selected_model_id)
 
 
 with gr.Blocks(title="Product Vision Board") as demo:
-    with gr.Accordion("Sesion de trabajo", open=True):
-        with gr.Group():
+    with gr.Sidebar():
+        with gr.Accordion("Sesión de Trabajo", open=True):
             session_name = gr.Textbox(
                 label="Nombre de sesion / caso",
                 value=DEFAULT_EXPORT_BASENAME,
             )
             llm_model = gr.Dropdown(
-                label="Modelo a utilizar",
+                label="Modelo LLM",
                 choices=LLM_MODEL_DROPDOWN_CHOICES,
                 value=DEFAULT_LLM_MODEL_ID,
                 interactive=True,
             )
+            session_filename = gr.Textbox(
+                label="Nombre de la sesión",
+                value=f"{DEFAULT_EXPORT_BASENAME}.md",
+                placeholder="ejemplo.md",
+            )
             with gr.Row():
-                save_session_button = gr.Button("Guardar sesion actual", variant="primary")
-                session_file = gr.Dropdown(
-                    label="Sesion guardada",
-                    choices=list_session_files(),
-                    interactive=True,
-                )
-                refresh_sessions_button = gr.Button("Actualizar sesiones")
-                load_session_button = gr.Button("Cargar sesion")
+                save_session_button = gr.Button("Grabar", variant="primary")
+                load_session_button = gr.Button("Leer")
             session_status = gr.Textbox(
                 label="Estado de sesion",
                 interactive=False,
             )
-            with gr.Accordion("Detalle de sesion", open=False):
-                session_path_output = gr.Textbox(
-                    label="Ruta de sesion",
-                    interactive=False,
-                )
+
+        gr.Markdown("### Pasos del PVB")
+        btn_nav_vision = gr.Button("1. Visión")
+        btn_nav_target = gr.Button("2. Target")
+        btn_nav_business = gr.Button("3. Valor de negocio")
+        btn_nav_need = gr.Button("4. Necesidad")
+        btn_nav_pps = gr.Button("5. Producto / Proceso / Servicio")
+        btn_nav_competition = gr.Button("5.1. Soluciones Similares")
+        btn_nav_channels = gr.Button("5.2. Canales y Medios")
+        btn_nav_investment = gr.Button("6. Inversión")
+        btn_nav_revenue = gr.Button("7. Flujos de Ingresos y/o Beneficios")
+        btn_nav_export = gr.Button("Generar Documento")
 
     with gr.Tabs(selected="vision") as pvb_tabs:
         with gr.Tab("1. Vision", id="vision"):
@@ -1882,18 +2094,12 @@ with gr.Blocks(title="Product Vision Board") as demo:
                     lines=form_spec["output_lines"],
                     interactive=False,
                 )
-                next_step = gr.Button(
-                    form_spec["next_step_label"],
-                    variant="secondary",
-                    visible=False,
-                )
 
             process.click(
                 fn=process_vision_and_lock_model,
                 inputs=[comments, llm_model],
-                outputs=[output, next_step, llm_model],
+                outputs=[output, llm_model],
             )
-            next_step.click(fn=lambda: gr.update(selected="target"), outputs=pvb_tabs)
 
         with gr.Tab("2. Target", id="target"):
             target_form_spec = TARGET_SPEC["form"]
@@ -1936,19 +2142,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
                     lines=target_form_spec["output_lines"],
                     interactive=False,
                 )
-            with gr.Group():
-                with gr.Row():
-                    previous_target_step = gr.Button(target_form_spec["previous_step_label"])
-                    next_target_step = gr.Button(
-                        target_form_spec["next_step_label"],
-                        variant="secondary",
-                        visible=False,
-                    )
 
-            previous_target_step.click(
-                fn=lambda: gr.update(selected="vision"),
-                outputs=pvb_tabs,
-            )
             add_target_item_button.click(
                 fn=add_list_item,
                 inputs=[target_item, target_items],
@@ -1987,11 +2181,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
             process_target_button.click(
                 fn=process_target,
                 inputs=[target_items, llm_model],
-                outputs=[target_output, next_target_step],
-            )
-            next_target_step.click(
-                fn=lambda: gr.update(selected="business_value"),
-                outputs=pvb_tabs,
+                outputs=target_output,
             )
 
         with gr.Tab("3. Valor de negocio", id="business_value"):
@@ -2035,19 +2225,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
                     lines=business_form_spec["output_lines"],
                     interactive=False,
                 )
-            with gr.Group():
-                with gr.Row():
-                    previous_business_step = gr.Button(business_form_spec["previous_step_label"])
-                    next_business_step = gr.Button(
-                        business_form_spec["next_step_label"],
-                        variant="secondary",
-                        visible=False,
-                    )
 
-            previous_business_step.click(
-                fn=lambda: gr.update(selected="target"),
-                outputs=pvb_tabs,
-            )
             add_business_item.click(
                 fn=add_list_item,
                 inputs=[business_item, business_items],
@@ -2086,11 +2264,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
             process_business_items.click(
                 fn=process_business_value,
                 inputs=[business_items, llm_model],
-                outputs=[business_output, next_business_step],
-            )
-            next_business_step.click(
-                fn=lambda: gr.update(selected="need"),
-                outputs=pvb_tabs,
+                outputs=business_output,
             )
 
         with gr.Tab("4. Necesidad", id="need"):
@@ -2134,19 +2308,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
                     lines=need_form_spec["output_lines"],
                     interactive=False,
                 )
-            with gr.Group():
-                with gr.Row():
-                    previous_need_step = gr.Button(need_form_spec["previous_step_label"])
-                    next_need_step = gr.Button(
-                        need_form_spec["next_step_label"],
-                        variant="secondary",
-                        visible=False,
-                    )
 
-            previous_need_step.click(
-                fn=lambda: gr.update(selected="business_value"),
-                outputs=pvb_tabs,
-            )
             add_need_item_button.click(
                 fn=add_list_item,
                 inputs=[need_item, need_items],
@@ -2185,11 +2347,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
             process_need_items.click(
                 fn=process_need,
                 inputs=[need_items, llm_model],
-                outputs=[need_output, next_need_step],
-            )
-            next_need_step.click(
-                fn=lambda: gr.update(selected="pps"),
-                outputs=pvb_tabs,
+                outputs=need_output,
             )
 
         with gr.Tab("5. Producto / Proceso / Servicio", id="pps"):
@@ -2233,19 +2391,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
                     lines=pps_form_spec["output_lines"],
                     interactive=False,
                 )
-            with gr.Group():
-                with gr.Row():
-                    previous_pps_step = gr.Button(pps_form_spec["previous_step_label"])
-                    next_pps_step = gr.Button(
-                        pps_form_spec["next_step_label"],
-                        variant="secondary",
-                        visible=False,
-                    )
 
-            previous_pps_step.click(
-                fn=lambda: gr.update(selected="need"),
-                outputs=pvb_tabs,
-            )
             add_pps_item_button.click(
                 fn=add_list_item,
                 inputs=[pps_item, pps_items],
@@ -2284,11 +2430,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
             process_pps_items.click(
                 fn=process_pps,
                 inputs=[pps_items, llm_model],
-                outputs=[pps_output, next_pps_step],
-            )
-            next_pps_step.click(
-                fn=lambda: gr.update(selected="competition"),
-                outputs=pvb_tabs,
+                outputs=pps_output,
             )
 
         with gr.Tab("5.1. Soluciones Similares", id="competition"):
@@ -2334,19 +2476,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
                     lines=competition_form_spec["output_lines"],
                     interactive=False,
                 )
-            with gr.Group():
-                with gr.Row():
-                    previous_competition_step = gr.Button(competition_form_spec["previous_step_label"])
-                    next_competition_step = gr.Button(
-                        competition_form_spec["next_step_label"],
-                        variant="secondary",
-                        visible=False,
-                    )
 
-            previous_competition_step.click(
-                fn=lambda: gr.update(selected="pps"),
-                outputs=pvb_tabs,
-            )
             add_competition_item_button.click(
                 fn=add_list_item,
                 inputs=[competition_item, competition_items],
@@ -2385,11 +2515,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
             process_competition_items.click(
                 fn=process_competition,
                 inputs=[competition_items, llm_model],
-                outputs=[competition_output, next_competition_step],
-            )
-            next_competition_step.click(
-                fn=lambda: gr.update(selected="channels"),
-                outputs=pvb_tabs,
+                outputs=competition_output,
             )
 
         with gr.Tab("5.2. Canales y Medios", id="channels"):
@@ -2433,19 +2559,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
                     lines=channels_form_spec["output_lines"],
                     interactive=False,
                 )
-            with gr.Group():
-                with gr.Row():
-                    previous_channels_step = gr.Button(channels_form_spec["previous_step_label"])
-                    next_channels_step = gr.Button(
-                        channels_form_spec["next_step_label"],
-                        variant="secondary",
-                        visible=False,
-                    )
 
-            previous_channels_step.click(
-                fn=lambda: gr.update(selected="competition"),
-                outputs=pvb_tabs,
-            )
             add_channels_item_button.click(
                 fn=add_list_item,
                 inputs=[channels_item, channels_items],
@@ -2484,11 +2598,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
             process_channels_items.click(
                 fn=process_channels,
                 inputs=[channels_items, llm_model],
-                outputs=[channels_output, next_channels_step],
-            )
-            next_channels_step.click(
-                fn=lambda: gr.update(selected="investment"),
-                outputs=pvb_tabs,
+                outputs=channels_output,
             )
 
         with gr.Tab("6. Inversion", id="investment"):
@@ -2560,23 +2670,11 @@ with gr.Blocks(title="Product Vision Board") as demo:
                     lines=investment_form_spec["output_lines"],
                     interactive=False,
                 )
-            with gr.Group():
-                with gr.Row():
-                    previous_investment_step = gr.Button(investment_form_spec["previous_step_label"])
-                    next_investment_step = gr.Button(
-                        investment_form_spec["next_step_label"],
-                        variant="secondary",
-                        visible=False,
-                    )
 
             investment_hours.change(
                 fn=calculate_investment_fte_display,
                 inputs=investment_hours,
                 outputs=investment_fte,
-            )
-            previous_investment_step.click(
-                fn=lambda: gr.update(selected="channels"),
-                outputs=pvb_tabs,
             )
             add_investment_item_button.click(
                 fn=add_investment_item,
@@ -2649,11 +2747,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
                     investment_end_date,
                     llm_model,
                 ],
-                outputs=[investment_output, next_investment_step],
-            )
-            next_investment_step.click(
-                fn=lambda: gr.update(selected="revenue_benefits"),
-                outputs=pvb_tabs,
+                outputs=investment_output,
             )
 
         with gr.Tab("7. Flujos de Ingresos y/o Beneficios", id="revenue_benefits"):
@@ -2697,19 +2791,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
                     lines=revenue_form_spec["output_lines"],
                     interactive=False,
                 )
-            with gr.Group():
-                with gr.Row():
-                    previous_revenue_step = gr.Button(revenue_form_spec["previous_step_label"])
-                    next_revenue_step = gr.Button(
-                        revenue_form_spec["next_step_label"],
-                        variant="secondary",
-                        visible=False,
-                    )
 
-            previous_revenue_step.click(
-                fn=lambda: gr.update(selected="investment"),
-                outputs=pvb_tabs,
-            )
             add_revenue_item_button.click(
                 fn=add_list_item,
                 inputs=[revenue_item, revenue_items],
@@ -2748,11 +2830,7 @@ with gr.Blocks(title="Product Vision Board") as demo:
             process_revenue_items.click(
                 fn=process_revenue_benefits,
                 inputs=[revenue_items, llm_model],
-                outputs=[revenue_output, next_revenue_step],
-            )
-            next_revenue_step.click(
-                fn=lambda: gr.update(selected="generate_document"),
-                outputs=pvb_tabs,
+                outputs=revenue_output,
             )
 
         with gr.Tab("Generar Documento", id="generate_document"):
@@ -2783,8 +2861,26 @@ with gr.Blocks(title="Product Vision Board") as demo:
                 outputs=[export_status, export_path],
             )
 
+    btn_nav_vision.click(fn=lambda: gr.update(selected="vision"), outputs=pvb_tabs)
+    btn_nav_target.click(fn=lambda: gr.update(selected="target"), outputs=pvb_tabs)
+    btn_nav_business.click(fn=lambda: gr.update(selected="business_value"), outputs=pvb_tabs)
+    btn_nav_need.click(fn=lambda: gr.update(selected="need"), outputs=pvb_tabs)
+    btn_nav_pps.click(fn=lambda: gr.update(selected="pps"), outputs=pvb_tabs)
+    btn_nav_competition.click(fn=lambda: gr.update(selected="competition"), outputs=pvb_tabs)
+    btn_nav_channels.click(fn=lambda: gr.update(selected="channels"), outputs=pvb_tabs)
+    btn_nav_investment.click(fn=lambda: gr.update(selected="investment"), outputs=pvb_tabs)
+    btn_nav_revenue.click(fn=lambda: gr.update(selected="revenue_benefits"), outputs=pvb_tabs)
+    btn_nav_export.click(fn=lambda: gr.update(selected="generate_document"), outputs=pvb_tabs)
+
+    session_name.change(
+        fn=suggest_session_filename,
+        inputs=session_name,
+        outputs=session_filename,
+    )
+
     session_save_inputs = [
         session_name,
+        session_filename,
         llm_model,
         comments,
         target_items,
@@ -2818,60 +2914,49 @@ with gr.Blocks(title="Product Vision Board") as demo:
         revenue_output,
     ]
     save_session_button.click(
-        fn=save_current_session,
+        fn=save_current_session_by_filename,
         inputs=session_save_inputs,
-        outputs=[session_status, session_path_output, session_file],
-    )
-    refresh_sessions_button.click(
-        fn=refresh_session_file_choices,
-        outputs=session_file,
+        outputs=[session_status],
     )
     load_session_button.click(
-        fn=load_session_into_ui,
-        inputs=session_file,
+        fn=load_current_session_by_filename,
+        inputs=[session_filename, llm_model],
         outputs=[
             session_status,
             session_name,
             llm_model,
             comments,
             output,
-            next_step,
             target_items,
             target_items_display,
             target_item_to_delete,
             target_item,
             target_output,
-            next_target_step,
             business_items,
             business_items_display,
             business_item_to_delete,
             business_item,
             business_output,
-            next_business_step,
             need_items,
             need_items_display,
             need_item_to_edit,
             need_item,
             need_output,
-            next_need_step,
             pps_items,
             pps_items_display,
             pps_item_to_edit,
             pps_item,
             pps_output,
-            next_pps_step,
             competition_items,
             competition_items_display,
             competition_item_to_edit,
             competition_item,
             competition_output,
-            next_competition_step,
             channels_items,
             channels_items_display,
             channels_item_to_edit,
             channels_item,
             channels_output,
-            next_channels_step,
             investment_items,
             investment_items_display,
             investment_item_to_edit,
@@ -2883,13 +2968,11 @@ with gr.Blocks(title="Product Vision Board") as demo:
             investment_start_date,
             investment_end_date,
             investment_output,
-            next_investment_step,
             revenue_items,
             revenue_items_display,
             revenue_item_to_edit,
             revenue_item,
             revenue_output,
-            next_revenue_step,
         ],
     )
 

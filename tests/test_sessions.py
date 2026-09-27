@@ -340,6 +340,66 @@ class SessionDocumentTests(unittest.TestCase):
         self.assertEqual(raw_inputs["investment"]["start_date"], "2026-06-15")
         self.assertEqual(raw_inputs["revenue_benefits"]["draft_item"], "Menor costo operativo")
 
+    def test_suggest_session_filename_sanitizes_and_appends_extension(self):
+        filename = app.suggest_session_filename("Proyecto Octubre 2026!")
+        self.assertEqual(filename, "proyecto-octubre-2026.md")
+
+    def test_save_current_session_by_filename_validates_required_fields(self):
+        err_case = app.save_current_session_by_filename("", "test.md", "gemini:gemini-2.5-flash-lite", "", [], "", [], "", [], "", [], "", [], "", [], "", [], "", "", "", "", "", [], "", "", "", "", "", "", "", "", "", "")
+        self.assertIn("Error", err_case)
+
+        err_fn = app.save_current_session_by_filename("Caso", "  ", "gemini:gemini-2.5-flash-lite", "", [], "", [], "", [], "", [], "", [], "", [], "", [], "", "", "", "", "", [], "", "", "", "", "", "", "", "", "", "")
+        self.assertIn("Error", err_fn)
+
+    def test_save_and_load_current_session_by_filename(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            feedback_dir = Path(temp_dir) / "feedback"
+            logs_dir = Path(temp_dir) / "logs"
+            feedback_dir.mkdir()
+
+            with patch.object(app, "FEEDBACK_DIR", feedback_dir):
+                with patch.object(app, "LOGS_DIR", logs_dir):
+                    with patch.object(app, "SESSIONS_LOG_PATH", logs_dir / "sesiones.jsonl"):
+                        status_save = app.save_current_session_by_filename(
+                            "Caso Nuevo",
+                            "caso_nuevo.md",
+                            "gemini:gemini-2.5-flash-lite",
+                            "Comentarios de vision",
+                            ["Ventas"], "",
+                            ["Mayor alcance"], "",
+                            ["Digitalizar"], "",
+                            ["Portal web"], "",
+                            ["Competidor A"], "",
+                            ["Email"], "",
+                            [], "", None, "", "", "",
+                            ["Suscripcion"], "",
+                            "Vision ok",
+                            "Target ok",
+                            "", "", "", "", "", "", ""
+                        )
+                        self.assertIn("Sesion guardada:", status_save)
+                        self.assertTrue((feedback_dir / "caso_nuevo.md").exists())
+
+                        load_res = app.load_current_session_by_filename(
+                            "caso_nuevo.md",
+                            "gemini:gemini-2.5-flash-lite"
+                        )
+                        self.assertIn("Sesion cargada.", load_res[0])
+                        self.assertEqual(load_res[1], "Caso Nuevo")
+                        self.assertEqual(load_res[3], "Comentarios de vision")
+
+    def test_load_current_session_by_filename_returns_error_if_file_missing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            feedback_dir = Path(temp_dir) / "feedback"
+            feedback_dir.mkdir()
+
+            with patch.object(app, "FEEDBACK_DIR", feedback_dir):
+                res = app.load_current_session_by_filename(
+                    "inexistente.md",
+                    "gemini:gemini-2.5-flash-lite"
+                )
+                self.assertIn("Error", res[0])
+
 
 if __name__ == "__main__":
     unittest.main()

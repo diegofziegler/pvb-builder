@@ -37,7 +37,7 @@ class FinalDocumentTests(unittest.TestCase):
             generated_at=datetime(2026, 5, 27, 15, 4),
         )
 
-        self.assertEqual(filename, "260527_1504_product-vision-board.md")
+        self.assertEqual(filename, "260527_1504_pvb-example.md")
 
     def test_generates_document_in_feedback_with_available_and_pending_sections(self):
         with tempfile.TemporaryDirectory() as temp_dir:
